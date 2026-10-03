@@ -1,6 +1,6 @@
 name: app_log_tracker
 description: "Event + API log tracker with dedup and offline outbox for Flutter."
-version: 0.1.1
+version: 0.2.0
 screenshots:
   - path: screenshots/demo-home.png
     description: "Demo app: custom track, Dio/http auto-log, payload preview with batch_id."

@@ -6,13 +6,13 @@ void main() {
   test('dedup: same keyEvent+id+data -> skipped', () async {
     final tracker = LogTracker();
     final first = await tracker.track(
-      keyEvent: 'errorApiRegistrasi',
+      keyEvent: 'errorApi',
       id: 'user_123',
       status: TrackStatus.failed,
       data: {'code': 'EMAIL_TAKEN'},
     );
     final second = await tracker.track(
-      keyEvent: 'errorApiRegistrasi',
+      keyEvent: 'errorApi',
       id: 'user_123',
       status: TrackStatus.failed,
       data: {'code': 'EMAIL_TAKEN'},
@@ -25,13 +25,13 @@ void main() {
   test('different data -> added', () async {
     final tracker = LogTracker();
     await tracker.track(
-      keyEvent: 'errorApiRegistrasi',
+      keyEvent: 'errorApi',
       id: 'user_123',
       status: TrackStatus.failed,
       data: {'code': 'EMAIL_TAKEN'},
     );
     final added = await tracker.track(
-      keyEvent: 'errorApiRegistrasi',
+      keyEvent: 'errorApi',
       id: 'user_123',
       status: TrackStatus.failed,
       data: {'code': 'PHONE_TAKEN'},
@@ -66,5 +66,46 @@ void main() {
     expect(result.success, true);
     expect(result.sentCount, 1);
     expect(await tracker.storage.count(), 0);
+  });
+
+  test('deleteEvents removes only given ids', () async {
+    final tracker = LogTracker();
+    await tracker.track(
+      keyEvent: 'errorApi',
+      id: 'a',
+      status: TrackStatus.failed,
+      data: const {},
+    );
+    await tracker.track(
+      keyEvent: 'errorApi',
+      id: 'b',
+      status: TrackStatus.failed,
+      data: const {},
+    );
+    final events = await tracker.storage.getUnsynced();
+    expect(events.length, 2);
+    await tracker.deleteEvents([events.first.eventId]);
+    expect(await tracker.storage.count(), 1);
+  });
+
+  test('auto-export sends and clears on interval', () async {
+    final tracker = LogTracker();
+    await tracker.track(
+      keyEvent: 'notif_read',
+      id: 'n1',
+      status: TrackStatus.success,
+      data: const {'read': true},
+    );
+    var sent = 0;
+    tracker.startAutoExport(
+      (_) async => sent++,
+      interval: const Duration(milliseconds: 50),
+    );
+    expect(tracker.isAutoExportRunning, true);
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    tracker.stopAutoExport();
+    expect(sent, greaterThanOrEqualTo(1));
+    expect(await tracker.storage.count(), 0);
+    expect(tracker.isAutoExportRunning, false);
   });
 }

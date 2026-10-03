@@ -1,3 +1,16 @@
+## 0.2.0
+
+* Rename contoh `errorApiRegistrasi` -> `errorApi` (generik, public-friendly).
+* Baru: `startAutoExport(send, interval)` + `stopAutoExport()` — export
+  periodik ke server internal, sukses = local dibersihkan otomatis.
+* Baru: `deleteEvents(ids)` untuk hapus manual (CRUD lengkap).
+* Fix overlay: search + filter pindah ke body (tidak nabrak header),
+  tombol Tutup dialog sekarang cuma nutup dialog (pakai dialog context),
+  label Bahasa Indonesia yang friendly.
+* Example: hapus chip duplikat, tambah hint + tombol auto-export on/off,
+  contoh positive (sukses) vs negative (gagal) case.
+* README: section alur CRUD + export, flush vs preview, kontrak server.
+
 ## 0.1.1
 
 * Add package `topics`, `issue_tracker`, `documentation` links.

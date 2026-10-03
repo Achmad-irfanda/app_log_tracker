@@ -8,7 +8,7 @@ Event + API log tracker dengan **dedup** dan **offline outbox** untuk Flutter.
 ![Debug overlay](screenshots/overlay-log.png)
 
 Bukan cuma HTTP logger. Consumer bisa track event custom apapun
-(`errorApiRegistrasi`, `notif_read`, ...), disimpan dulu di local,
+(`errorApi`, `notif_read`, ...), disimpan dulu di local,
 di-dedup (`keyEvent + id + data`), lalu dikirim ke server sebagai
 satu batch JSON dengan `batch_id` unik.
 
@@ -20,7 +20,8 @@ positive/negative case, dan API log otomatis (Dio + http).
 - `track(keyEvent, id, status, data)` — custom event apapun
 - Dedup otomatis: sama persis → skip, beda → tambah
 - Auto API log: `TrackerDioInterceptor` + `TrackedHttpClient`
-- Outbox: simpan di local dulu, `flush()` kirim batch ke server
+- Outbox: simpan di local dulu, `flush()` / `startAutoExport()` kirim batch ke server
+- `deleteEvents(ids)` buat hapus manual, `clear()` wajib saat logout
 - `batch_id` (uuid) sebagai idempotency key per payload
 - Storage: `SqfliteTrackStorage` (persist) + `InMemoryTrackStorage` (test)
 - Overlay debug: list, search, filter success/failed, detail JSON, clear
@@ -30,7 +31,7 @@ positive/negative case, dan API log otomatis (Dio + http).
 
 ```yaml
 dependencies:
-  app_log_tracker: ^0.1.0
+  app_log_tracker: ^0.2.0
 ```
 
 ## Usage
@@ -43,7 +44,7 @@ import 'package:app_log_tracker/app_log_tracker.dart';
 final tracker = LogTracker(storage: SqfliteTrackStorage());
 
 final added = await tracker.track(
-  keyEvent: 'errorApiRegistrasi',
+  keyEvent: 'errorApi',
   id: 'user_123',
   status: TrackStatus.failed,
   data: {'code': 'EMAIL_TAKEN'},
@@ -71,7 +72,7 @@ Payload yang dikirim:
   "events": [
     {
       "event_id": "uuid",
-      "key_event": "errorApiRegistrasi",
+      "key_event": "errorApi",
       "entity_id": "user_123",
       "status": "failed",
       "data": {"code": "EMAIL_TAKEN"},
@@ -106,6 +107,63 @@ Navigator.push(context,
 ```dart
 await tracker.clear(); // wajib, biar data user tidak bocor
 ```
+
+## Alur kerja: record → export → bersih
+
+```
+track() → local (dedup) → export → server → sukses = hapus local
+```
+
+| Operasi | API | Keterangan |
+|---|---|---|
+| Create | `track(keyEvent, id, status, data)` | `false` = duplikat, di-skip |
+| Read | `query()` / halaman Track Log | Lihat & filter di device |
+| Update | `track()` lagi dengan data baru | Log itu immutable; koreksi = event baru (dedup otomatis bedain) |
+| Delete | `flush()` sukses / `deleteEvents(ids)` / `clear()` | Flush sukses langsung hapus local |
+
+### Preview vs Flush vs Auto-export
+
+- **Preview** (`buildPayload`) — cuma INTIP: return JSON tanpa hapus local.
+  Buat debug atau sync manual (copy → POST sendiri → `deleteEvents`).
+- **Flush** (`flush(send)`) — KIRIM SEKALI + hapus yang sukses dari local.
+  Device lanjut nge-log data fresh sesudahnya.
+- **Auto-export** (`startAutoExport(send, interval: ...)`) — flush jalan
+  sendiri tiap interval (misal 5 menit). Gagal = dicoba lagi interval
+  berikutnya. Matikan via `stopAutoExport()` (otomatis mati saat `clear()`).
+
+### Contoh negative case (API gagal)
+
+```dart
+try {
+  final res = await dio.post('https://api.lu/register', data: form);
+  await tracker.track(
+    keyEvent: 'register',
+    id: userId,
+    status: TrackStatus.success,
+    data: {'user_id': res.data['id']},
+  );
+} on DioException catch (e) {
+  await tracker.track(
+    keyEvent: 'errorApi',
+    id: userId,
+    status: TrackStatus.failed,
+    data: {'code': e.response?.data['code'], 'url': e.requestOptions.path},
+  );
+}
+```
+
+### Kontrak server (tinggal POST payload)
+
+```dart
+tracker.startAutoExport(
+  (payload) => dio.post('https://api.internal.lu/logs', data: payload),
+  interval: const Duration(minutes: 5),
+);
+```
+
+Server terima `{batch_id, sent_at, events: [...]}`.
+Dedup by `event_id`/`batch_id` di server biar retry aman.
+Sukses simpan → balas 200 → package otomatis hapus local.
 
 ## Konfigurasi
 

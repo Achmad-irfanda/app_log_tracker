@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 /// Demo app_log_tracker:
-/// - custom event (errorApiRegistrasi, notif_read)
+/// - custom event (errorApi, notif_read)
 /// - auto API log via Dio + http
-/// - dedup, payload preview, flush, overlay UI
+/// - dedup, preview payload, flush manual + otomatis, halaman Track Log
 void main() {
   runApp(const TrackerDemoApp());
 }
@@ -31,18 +31,26 @@ class _TrackerDemoAppState extends State<TrackerDemoApp> {
     dio = Dio()..interceptors.add(TrackerDioInterceptor(tracker));
   }
 
+  @override
+  void dispose() {
+    tracker.stopAutoExport();
+    super.dispose();
+  }
+
   void _info(String s) => setState(() => _log = s);
 
-  Future<void> _trackErrorRegistrasi() async {
+  /// Contoh NEGATIVE case: API gagal / validasi gagal / error bisnis.
+  Future<void> _trackErrorApi() async {
     final added = await tracker.track(
-      keyEvent: 'errorApiRegistrasi',
+      keyEvent: 'errorApi',
       id: 'user_123',
       status: TrackStatus.failed,
       data: {'code': 'EMAIL_TAKEN', 'message': 'Email sudah dipakai'},
     );
-    _info(added ? 'errorApiRegistrasi DITAMBAH' : 'DUPLIKAT -> di-skip');
+    _info(added ? 'errorApi DITAMBAH' : 'DUPLIKAT -> di-skip');
   }
 
+  /// Contoh POSITIVE case: aksi user berhasil (baca notif, dsb).
   Future<void> _trackNotifRead() async {
     final added = await tracker.track(
       keyEvent: 'notif_read',
@@ -56,7 +64,7 @@ class _TrackerDemoAppState extends State<TrackerDemoApp> {
   Future<void> _hitDio() async {
     try {
       await dio.get('https://jsonplaceholder.typicode.com/posts/1');
-      _info('Dio GET sukses -> cek overlay, ada api_log');
+      _info('Dio GET sukses -> cek Track Log, ada api_log');
     } catch (e) {
       _info('Dio error: $e');
     }
@@ -68,12 +76,14 @@ class _TrackerDemoAppState extends State<TrackerDemoApp> {
       final res = await client.get(
         Uri.parse('https://jsonplaceholder.typicode.com/posts/2'),
       );
-      _info('http GET ${res.statusCode} -> cek overlay, ada api_log');
+      _info('http GET ${res.statusCode} -> cek Track Log, ada api_log');
     } catch (e) {
       _info('http error: $e');
     }
   }
 
+  /// Preview payload: LIHAT data yang akan dikirim, tanpa menghapus local.
+  /// Dipakai buat debug / sync manual (copy -> POST sendiri -> deleteEvents).
   Future<void> _previewPayload() async {
     final payload = await tracker.buildPayload();
     final events = payload['events'] as List;
@@ -84,6 +94,8 @@ class _TrackerDemoAppState extends State<TrackerDemoApp> {
     );
   }
 
+  /// Flush: KIRIM batch ke server + HAPUS yang sukses dari local.
+  /// Device lanjut nge-log data fresh sesudahnya.
   Future<void> _flush() async {
     final result = await tracker.flush((payload) async {
       // Ganti dengan API server lu:
@@ -101,6 +113,29 @@ class _TrackerDemoAppState extends State<TrackerDemoApp> {
     );
   }
 
+  /// Export otomatis tiap 10 detik (demo). Produksi: 5 menit / 15 menit.
+  /// Sukses = local dibersihkan otomatis. Gagal = dicoba lagi interval berikut.
+  Future<void> _toggleAutoExport() async {
+    if (tracker.isAutoExportRunning) {
+      tracker.stopAutoExport();
+      _info('Auto-export MATI');
+      return;
+    }
+    tracker.startAutoExport(
+      (payload) async {
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+        debugPrint('AUTO-EXPORT: ${(payload['events'] as List).length} events');
+      },
+      interval: const Duration(seconds: 10),
+      onResult: (r) => _info(
+        r.sentCount == 0
+            ? 'Auto-export: antrean kosong'
+            : 'Auto-export: ${r.sentCount} terkirim, local dibersihkan',
+      ),
+    );
+    _info('Auto-export NYALA (tiap 10 detik)');
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -109,68 +144,61 @@ class _TrackerDemoAppState extends State<TrackerDemoApp> {
       home: Scaffold(
         appBar: AppBar(title: const Text('app_log_tracker demo')),
         floatingActionButton: TrackerBubble(tracker: tracker),
-        // Builder: context di bawah MaterialApp supaya Navigator.of jalan.
-        body: Builder(
-          builder: (context) => ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  ElevatedButton(
-                    onPressed: _trackErrorRegistrasi,
-                    child: const Text('Track errorApiRegistrasi'),
-                  ),
-                  ElevatedButton(
-                    onPressed: _trackNotifRead,
-                    child: const Text('Track notif_read'),
-                  ),
-                  ElevatedButton(
-                    onPressed: _hitDio,
-                    child: const Text('Dio GET'),
-                  ),
-                  ElevatedButton(
-                    onPressed: _hitHttp,
-                    child: const Text('http GET'),
-                  ),
-                  ElevatedButton(
-                    onPressed: _previewPayload,
-                    child: const Text('Preview payload'),
-                  ),
-                  ElevatedButton(onPressed: _flush, child: const Text('Flush')),
-                  OutlinedButton(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => TrackerLogPage(tracker: tracker),
-                      ),
-                    ),
-                    child: const Text('Buka overlay log'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.black87,
-                  borderRadius: BorderRadius.circular(8),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ElevatedButton(
+                  onPressed: _trackErrorApi,
+                  child: const Text('Track errorApi (gagal)'),
                 ),
-                child: Text(
-                  _log,
-                  style: const TextStyle(
-                    color: Colors.greenAccent,
-                    fontFamily: 'monospace',
-                  ),
+                ElevatedButton(
+                  onPressed: _trackNotifRead,
+                  child: const Text('Track notif_read (sukses)'),
+                ),
+                ElevatedButton(
+                  onPressed: _hitDio,
+                  child: const Text('Dio GET'),
+                ),
+                ElevatedButton(
+                  onPressed: _hitHttp,
+                  child: const Text('http GET'),
+                ),
+                ElevatedButton(
+                  onPressed: _previewPayload,
+                  child: const Text('Preview payload'),
+                ),
+                ElevatedButton(onPressed: _flush, child: const Text('Flush')),
+                ElevatedButton(
+                  onPressed: _toggleAutoExport,
+                  child: const Text('Auto-export on/off'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.black87,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                _log,
+                style: const TextStyle(
+                  color: Colors.greenAccent,
+                  fontFamily: 'monospace',
                 ),
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'Coba: tekan "Track errorApiRegistrasi" 2x -> '
-                'yang kedua di-skip (dedup). Ubah data-nya -> ditambah.',
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Coba: tekan "Track errorApi" 2x -> yang kedua di-skip (dedup).\n'
+              'Buka halaman "Track Log" lewat tombol pojok kanan bawah.',
+            ),
+          ],
         ),
       ),
     );

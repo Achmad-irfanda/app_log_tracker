@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
 
@@ -39,7 +41,7 @@ class LogTracker {
   final _uuid = const Uuid();
 
   /// Track event custom. Contoh:
-  /// `track(keyEvent: 'errorApiRegistrasi', id: userId, status: failed, data: {...})`
+  /// `track(keyEvent: 'errorApi', id: userId, status: failed, data: {...})`
   ///
   /// Return `false` kalau duplicate (sama keyEvent+id+data) -> tidak ditambah.
   Future<bool> track({
@@ -114,6 +116,48 @@ class LogTracker {
     }
   }
 
+  /// Hapus event tertentu pakai `event_id`-nya.
+  /// Dipakai kalau consumer sudah sync manual via [buildPayload].
+  Future<void> deleteEvents(List<String> eventIds) =>
+      storage.markSynced(eventIds);
+
+  /// Export otomatis tiap [interval]:
+  /// ambil batch -> kirim via [send] -> sukses = hapus dari local
+  /// (device lanjut nge-log data fresh), gagal = coba lagi interval berikut.
+  /// Tidak tumpuk: kalau flush sebelumnya belum selesai, interval dilewati.
+  void startAutoExport(
+    Future<void> Function(Map<String, dynamic> payload) send, {
+    Duration interval = const Duration(minutes: 5),
+    void Function(FlushResult result)? onResult,
+  }) {
+    stopAutoExport();
+    _timer = Timer.periodic(interval, (_) async {
+      if (_flushing) return;
+      _flushing = true;
+      try {
+        final result = await flush(send);
+        onResult?.call(result);
+      } finally {
+        _flushing = false;
+      }
+    });
+  }
+
+  /// Hentikan export otomatis. Panggil di `dispose` atau saat logout.
+  void stopAutoExport() {
+    _timer?.cancel();
+    _timer = null;
+  }
+
+  bool get isAutoExportRunning => _timer?.isActive ?? false;
+
+  Timer? _timer;
+  bool _flushing = false;
+
   /// Wajib dipanggil saat logout biar data user tidak bocor.
-  Future<void> clear() => storage.clear();
+  /// Matikan juga auto-export supaya tidak kirim data akun lama.
+  Future<void> clear() async {
+    stopAutoExport();
+    await storage.clear();
+  }
 }

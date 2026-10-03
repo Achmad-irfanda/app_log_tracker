@@ -14,7 +14,9 @@ void main() {
     await tester.pumpWidget(const TrackerDemoApp());
 
     expect(find.text('app_log_tracker demo'), findsOneWidget);
-    expect(find.text('Track errorApiRegistrasi'), findsOneWidget);
+    expect(find.text('Track errorApi (gagal)'), findsOneWidget);
+    expect(find.text('Track notif_read (sukses)'), findsOneWidget);
     expect(find.text('Flush'), findsOneWidget);
+    expect(find.text('Auto-export on/off'), findsOneWidget);
   });
 }

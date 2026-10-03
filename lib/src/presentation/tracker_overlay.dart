@@ -1,10 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
-import '../domain/track_event.dart';
 import '../data/log_tracker.dart';
+import '../domain/track_event.dart';
 
-/// Overlay debug: list + detail + search by keyEvent.
-/// V1: read-only, tanpa dependency tambahan.
+/// Halaman debug: lihat, cari, filter, dan hapus log yang tersimpan di local.
+/// Read-only kecuali tombol hapus (dipakai saat logout / testing).
 class TrackerLogPage extends StatefulWidget {
   const TrackerLogPage({super.key, required this.tracker});
 
@@ -22,10 +24,10 @@ class _TrackerLogPageState extends State<TrackerLogPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('App Log Tracker'),
+        title: const Text('Track Log'),
         actions: [
           IconButton(
-            tooltip: 'Clear (logout)',
+            tooltip: 'Hapus semua (misal saat logout)',
             icon: const Icon(Icons.delete_outline),
             onPressed: () async {
               await widget.tracker.clear();
@@ -33,106 +35,130 @@ class _TrackerLogPageState extends State<TrackerLogPage> {
             },
           ),
         ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(96),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+            child: TextField(
+              decoration: const InputDecoration(
+                hintText: 'Cari keyEvent / id...',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              onChanged: (v) => setState(() => _query = v.toLowerCase()),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: Row(
               children: [
-                TextField(
-                  decoration: const InputDecoration(
-                    hintText: 'Search keyEvent / entityId...',
-                    prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                  onChanged: (v) => setState(() => _query = v.toLowerCase()),
+                ChoiceChip(
+                  label: const Text('Semua'),
+                  selected: _filter == null,
+                  onSelected: (_) => setState(() => _filter = null),
                 ),
-                const SizedBox(height: 8),
-                SegmentedButton<TrackStatus?>(
-                  segments: const [
-                    ButtonSegment(value: null, label: Text('All')),
-                    ButtonSegment(
-                      value: TrackStatus.success,
-                      label: Text('Success'),
-                    ),
-                    ButtonSegment(
-                      value: TrackStatus.failed,
-                      label: Text('Failed'),
-                    ),
-                  ],
-                  selected: {_filter},
-                  onSelectionChanged: (s) => setState(() => _filter = s.first),
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: const Text('Sukses'),
+                  selected: _filter == TrackStatus.success,
+                  onSelected: (_) =>
+                      setState(() => _filter = TrackStatus.success),
+                ),
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: const Text('Gagal'),
+                  selected: _filter == TrackStatus.failed,
+                  onSelected: (_) =>
+                      setState(() => _filter = TrackStatus.failed),
                 ),
               ],
             ),
           ),
-        ),
-      ),
-      body: FutureBuilder<List<TrackEvent>>(
-        future: widget.tracker.storage.query(
-          keyEvent: null,
-          status: _filter,
-          limit: 200,
-        ),
-        builder: (context, snap) {
-          if (!snap.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final items = snap.data!
-              .where(
-                (e) =>
-                    _query.isEmpty ||
-                    e.keyEvent.toLowerCase().contains(_query) ||
-                    e.entityId.toLowerCase().contains(_query),
-              )
-              .toList();
-          if (items.isEmpty) {
-            return const Center(child: Text('Belum ada log'));
-          }
-          return ListView.builder(
-            itemCount: items.length,
-            itemBuilder: (context, i) {
-              final e = items[i];
-              final failed = e.status == TrackStatus.failed;
-              return ListTile(
-                leading: Icon(
-                  failed ? Icons.error_outline : Icons.check_circle_outline,
-                  color: failed ? Colors.red : Colors.green,
-                ),
-                title: Text(
-                  e.keyEvent,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: Text(
-                  '${e.entityId}\n${e.createdAt.toIso8601String()}',
-                ),
-                isThreeLine: true,
-                onTap: () => showDialog<void>(
-                  context: context,
-                  builder: (_) => AlertDialog(
-                    title: Text(e.keyEvent),
-                    content: SingleChildScrollView(
-                      child: Text(e.toJson().toString()),
+          const Divider(height: 1),
+          Expanded(
+            child: FutureBuilder<List<TrackEvent>>(
+              future: widget.tracker.storage.query(
+                keyEvent: null,
+                status: _filter,
+                limit: 200,
+              ),
+              builder: (context, snap) {
+                if (!snap.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final items = snap.data!
+                    .where(
+                      (e) =>
+                          _query.isEmpty ||
+                          e.keyEvent.toLowerCase().contains(_query) ||
+                          e.entityId.toLowerCase().contains(_query),
+                    )
+                    .toList();
+                if (items.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      'Belum ada log.\nTrack event dulu, baru muncul di sini.',
+                      textAlign: TextAlign.center,
                     ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Tutup'),
+                  );
+                }
+                return ListView.builder(
+                  itemCount: items.length,
+                  itemBuilder: (context, i) {
+                    final e = items[i];
+                    final failed = e.status == TrackStatus.failed;
+                    return ListTile(
+                      leading: Icon(
+                        failed
+                            ? Icons.error_outline
+                            : Icons.check_circle_outline,
+                        color: failed ? Colors.red : Colors.green,
                       ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
+                      title: Text(
+                        e.keyEvent,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        '${e.entityId}\n${e.createdAt.toIso8601String()}',
+                      ),
+                      isThreeLine: true,
+                      onTap: () => showDialog<void>(
+                        context: context,
+                        builder: (dialogContext) => AlertDialog(
+                          title: Text(e.keyEvent),
+                          content: SingleChildScrollView(
+                            child: Text(
+                              const JsonEncoder.withIndent(
+                                '  ',
+                              ).convert(e.toJson()),
+                              style: const TextStyle(fontFamily: 'monospace'),
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              // Pakai context dialog, bukan context halaman,
+                              // supaya yang tertutup cuma dialognya.
+                              onPressed: () => Navigator.pop(dialogContext),
+                              child: const Text('Tutup'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-/// Floating bubble untuk buka log dari dalam app (debug only).
+/// Tombol bubble buat buka log dari dalam app (debug only).
 class TrackerBubble extends StatelessWidget {
   const TrackerBubble({super.key, required this.tracker});
 
@@ -142,6 +168,7 @@ class TrackerBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     return FloatingActionButton.small(
       heroTag: 'tracker_bubble',
+      tooltip: 'Buka Track Log',
       onPressed: () => Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => TrackerLogPage(tracker: tracker)),
       ),
