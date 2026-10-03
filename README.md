@@ -4,8 +4,10 @@
 
 Event + API log tracker dengan **dedup** dan **offline outbox** untuk Flutter.
 
-![Demo app](screenshots/demo-home.png)
-![Debug overlay](screenshots/overlay-log.png)
+<p>
+  <img src="https://github.com/Achmad-irfanda/app_log_tracker/raw/main/screenshots/demo-home.png" width="280" alt="Demo app">
+  <img src="https://github.com/Achmad-irfanda/app_log_tracker/raw/main/screenshots/overlay-log.png" width="280" alt="Halaman Track Log">
+</p>
 
 Bukan cuma HTTP logger. Consumer bisa track event custom apapun
 (`errorApi`, `notif_read`, ...), disimpan dulu di local,
@@ -23,6 +25,7 @@ positive/negative case, dan API log otomatis (Dio + http).
 - Outbox: simpan di local dulu, `flush()` / `startAutoExport()` kirim batch ke server
 - `deleteEvents(ids)` buat hapus manual, `clear()` wajib saat logout
 - `batch_id` (uuid) sebagai idempotency key per payload
+- Bahasa UI overlay: Indonesia (default) + English via `TrackerLanguage`
 - Storage: `SqfliteTrackStorage` (persist) + `InMemoryTrackStorage` (test)
 - Overlay debug: list, search, filter success/failed, detail JSON, clear
 - Cap 500 event per device (FIFO), batch 50, timeout 15s, bedain 4xx vs 5xx
@@ -97,9 +100,12 @@ if (!result.success && result.retryable) {
 // Bubble kecil di pojok (debug only):
 TrackerBubble(tracker: tracker)
 
-// Atau full page:
+// Atau full page (bisa pilih bahasa):
 Navigator.push(context,
-  MaterialPageRoute(builder: (_) => TrackerLogPage(tracker: tracker)));
+  MaterialPageRoute(builder: (_) => TrackerLogPage(
+    tracker: tracker,
+    language: TrackerLanguage.english, // atau .indonesian (default)
+  )));
 ```
 
 ### 5. Logout

@@ -1,3 +1,10 @@
+## 0.3.0
+
+* Baru: multi-bahasa overlay via `TrackerLanguage.indonesian` (default,
+  friendly) / `.english` — berlaku di `TrackerLogPage` + `TrackerBubble`.
+* README: screenshot tampil kecil side-by-side (elegan di pub.dev).
+* Example: tombol ganti bahasa ID/EN buat coba overlay dua bahasa.
+
 ## 0.2.0
 
 * Rename contoh `errorApiRegistrasi` -> `errorApi` (generik, public-friendly).

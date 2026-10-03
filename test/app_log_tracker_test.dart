@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:app_log_tracker/app_log_tracker.dart';
@@ -107,5 +108,63 @@ void main() {
     expect(sent, greaterThanOrEqualTo(1));
     expect(await tracker.storage.count(), 0);
     expect(tracker.isAutoExportRunning, false);
+  });
+
+  test('strings ID & EN terisi semua', () {
+    for (final lang in TrackerLanguage.values) {
+      final s = TrackerStrings.of(lang);
+      for (final v in [
+        s.searchHint,
+        s.filterAll,
+        s.filterSuccess,
+        s.filterFailed,
+        s.emptyTitle,
+        s.emptySubtitle,
+        s.clearTooltip,
+        s.close,
+        s.openLogTooltip,
+      ]) {
+        expect(v.isNotEmpty, true, reason: '$lang has empty string');
+      }
+    }
+    expect(
+      TrackerStrings.of(TrackerLanguage.indonesian).searchHint,
+      isNot(TrackerStrings.of(TrackerLanguage.english).searchHint),
+    );
+  });
+
+  testWidgets('overlay English renders English strings', (tester) async {
+    final tracker = LogTracker();
+    await tracker.track(
+      keyEvent: 'errorApi',
+      id: 'u1',
+      status: TrackStatus.failed,
+      data: const {},
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TrackerLogPage(
+          tracker: tracker,
+          language: TrackerLanguage.english,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Track Log'), findsOneWidget);
+    expect(find.text('Search keyEvent / id...'), findsOneWidget);
+    expect(find.text('All'), findsOneWidget);
+    expect(find.text('errorApi'), findsOneWidget);
+  });
+
+  testWidgets('overlay Indonesian renders Indonesian strings', (tester) async {
+    final tracker = LogTracker();
+    await tester.pumpWidget(
+      MaterialApp(home: TrackerLogPage(tracker: tracker)),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Track Log'), findsOneWidget);
+    expect(find.text('Cari keyEvent / id...'), findsOneWidget);
+    expect(find.text('Semua'), findsOneWidget);
+    expect(find.textContaining('Belum ada log.'), findsOneWidget);
   });
 }

@@ -22,6 +22,7 @@ class _TrackerDemoAppState extends State<TrackerDemoApp> {
   late final LogTracker tracker;
   late final Dio dio;
   String _log = 'Siap. Track sesuatu dulu.';
+  TrackerLanguage _lang = TrackerLanguage.indonesian;
 
   @override
   void initState() {
@@ -143,7 +144,7 @@ class _TrackerDemoAppState extends State<TrackerDemoApp> {
       theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
       home: Scaffold(
         appBar: AppBar(title: const Text('app_log_tracker demo')),
-        floatingActionButton: TrackerBubble(tracker: tracker),
+        floatingActionButton: TrackerBubble(tracker: tracker, language: _lang),
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -175,6 +176,23 @@ class _TrackerDemoAppState extends State<TrackerDemoApp> {
                 ElevatedButton(
                   onPressed: _toggleAutoExport,
                   child: const Text('Auto-export on/off'),
+                ),
+                ElevatedButton(
+                  onPressed: () => setState(() {
+                    _lang = _lang == TrackerLanguage.indonesian
+                        ? TrackerLanguage.english
+                        : TrackerLanguage.indonesian;
+                    _info(
+                      _lang == TrackerLanguage.indonesian
+                          ? 'Bahasa overlay: Indonesia'
+                          : 'Overlay language: English',
+                    );
+                  }),
+                  child: Text(
+                    _lang == TrackerLanguage.indonesian
+                        ? 'Bahasa: ID (tap = EN)'
+                        : 'Language: EN (tap = ID)',
+                  ),
                 ),
               ],
             ),

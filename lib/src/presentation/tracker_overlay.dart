@@ -4,13 +4,20 @@ import 'package:flutter/material.dart';
 
 import '../data/log_tracker.dart';
 import '../domain/track_event.dart';
+import '../domain/track_language.dart';
 
 /// Halaman debug: lihat, cari, filter, dan hapus log yang tersimpan di local.
 /// Read-only kecuali tombol hapus (dipakai saat logout / testing).
+/// Bahasa UI diatur via [language] (default Indonesia).
 class TrackerLogPage extends StatefulWidget {
-  const TrackerLogPage({super.key, required this.tracker});
+  const TrackerLogPage({
+    super.key,
+    required this.tracker,
+    this.language = TrackerLanguage.indonesian,
+  });
 
   final LogTracker tracker;
+  final TrackerLanguage language;
 
   @override
   State<TrackerLogPage> createState() => _TrackerLogPageState();
@@ -22,12 +29,13 @@ class _TrackerLogPageState extends State<TrackerLogPage> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = TrackerStrings.of(widget.language);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Track Log'),
+        title: Text(strings.pageTitle),
         actions: [
           IconButton(
-            tooltip: 'Hapus semua (misal saat logout)',
+            tooltip: strings.clearTooltip,
             icon: const Icon(Icons.delete_outline),
             onPressed: () async {
               await widget.tracker.clear();
@@ -41,10 +49,10 @@ class _TrackerLogPageState extends State<TrackerLogPage> {
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
             child: TextField(
-              decoration: const InputDecoration(
-                hintText: 'Cari keyEvent / id...',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                hintText: strings.searchHint,
+                prefixIcon: const Icon(Icons.search),
+                border: const OutlineInputBorder(),
                 isDense: true,
               ),
               onChanged: (v) => setState(() => _query = v.toLowerCase()),
@@ -55,20 +63,20 @@ class _TrackerLogPageState extends State<TrackerLogPage> {
             child: Row(
               children: [
                 ChoiceChip(
-                  label: const Text('Semua'),
+                  label: Text(strings.filterAll),
                   selected: _filter == null,
                   onSelected: (_) => setState(() => _filter = null),
                 ),
                 const SizedBox(width: 8),
                 ChoiceChip(
-                  label: const Text('Sukses'),
+                  label: Text(strings.filterSuccess),
                   selected: _filter == TrackStatus.success,
                   onSelected: (_) =>
                       setState(() => _filter = TrackStatus.success),
                 ),
                 const SizedBox(width: 8),
                 ChoiceChip(
-                  label: const Text('Gagal'),
+                  label: Text(strings.filterFailed),
                   selected: _filter == TrackStatus.failed,
                   onSelected: (_) =>
                       setState(() => _filter = TrackStatus.failed),
@@ -97,9 +105,9 @@ class _TrackerLogPageState extends State<TrackerLogPage> {
                     )
                     .toList();
                 if (items.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Text(
-                      'Belum ada log.\nTrack event dulu, baru muncul di sini.',
+                      '${strings.emptyTitle}\n${strings.emptySubtitle}',
                       textAlign: TextAlign.center,
                     ),
                   );
@@ -141,7 +149,7 @@ class _TrackerLogPageState extends State<TrackerLogPage> {
                               // Pakai context dialog, bukan context halaman,
                               // supaya yang tertutup cuma dialognya.
                               onPressed: () => Navigator.pop(dialogContext),
-                              child: const Text('Tutup'),
+                              child: Text(strings.close),
                             ),
                           ],
                         ),
@@ -160,17 +168,25 @@ class _TrackerLogPageState extends State<TrackerLogPage> {
 
 /// Tombol bubble buat buka log dari dalam app (debug only).
 class TrackerBubble extends StatelessWidget {
-  const TrackerBubble({super.key, required this.tracker});
+  const TrackerBubble({
+    super.key,
+    required this.tracker,
+    this.language = TrackerLanguage.indonesian,
+  });
 
   final LogTracker tracker;
+  final TrackerLanguage language;
 
   @override
   Widget build(BuildContext context) {
+    final strings = TrackerStrings.of(language);
     return FloatingActionButton.small(
       heroTag: 'tracker_bubble',
-      tooltip: 'Buka Track Log',
+      tooltip: strings.openLogTooltip,
       onPressed: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => TrackerLogPage(tracker: tracker)),
+        MaterialPageRoute(
+          builder: (_) => TrackerLogPage(tracker: tracker, language: language),
+        ),
       ),
       child: const Icon(Icons.bug_report_outlined),
     );

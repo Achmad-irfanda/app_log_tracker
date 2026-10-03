@@ -1,4 +1,5 @@
 export 'src/domain/track_event.dart';
+export 'src/domain/track_language.dart';
 export 'src/domain/track_storage.dart';
 export 'src/data/in_memory_storage.dart';
 export 'src/data/sqflite_storage.dart';
