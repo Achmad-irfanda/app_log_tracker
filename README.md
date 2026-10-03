@@ -1,6 +1,11 @@
 # app_log_tracker
 
+[![pub package](https://img.shields.io/pub/v/app_log_tracker.svg)](https://pub.dev/packages/app_log_tracker)
+
 Event + API log tracker dengan **dedup** dan **offline outbox** untuk Flutter.
+
+![Demo app](screenshots/demo-home.png)
+![Debug overlay](screenshots/overlay-log.png)
 
 Bukan cuma HTTP logger. Consumer bisa track event custom apapun
 (`errorApiRegistrasi`, `notif_read`, ...), disimpan dulu di local,

@@ -1,3 +1,10 @@
+## 0.1.1
+
+* Add package `topics`, `issue_tracker`, `documentation` links.
+* Add real iOS screenshots (demo + overlay) wired to pub.dev.
+* Fix example: `Navigator.of` context now under `MaterialApp` (Builder).
+* Add `integration_test` driving the demo (also used for screenshots).
+
 ## 0.1.0
 
 * Initial release.

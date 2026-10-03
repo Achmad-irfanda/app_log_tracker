@@ -1,8 +1,22 @@
 name: app_log_tracker
 description: "Event + API log tracker with dedup and offline outbox for Flutter."
-version: 0.1.0
+version: 0.1.1
+screenshots:
+  - path: screenshots/demo-home.png
+    description: "Demo app: custom track, Dio/http auto-log, payload preview with batch_id."
+  - path: screenshots/overlay-log.png
+    description: "Debug overlay: search, filter success/failed, event detail."
 homepage: https://github.com/Achmad-irfanda/app_log_tracker
 repository: https://github.com/Achmad-irfanda/app_log_tracker
+issue_tracker: https://github.com/Achmad-irfanda/app_log_tracker/issues
+documentation: https://github.com/Achmad-irfanda/app_log_tracker#readme
+
+topics:
+  - logging
+  - debugging
+  - dio
+  - http
+  - offline
 
 environment:
   sdk: ^3.11.0

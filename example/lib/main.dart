@@ -109,65 +109,68 @@ class _TrackerDemoAppState extends State<TrackerDemoApp> {
       home: Scaffold(
         appBar: AppBar(title: const Text('app_log_tracker demo')),
         floatingActionButton: TrackerBubble(tracker: tracker),
-        body: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ElevatedButton(
-                  onPressed: _trackErrorRegistrasi,
-                  child: const Text('Track errorApiRegistrasi'),
-                ),
-                ElevatedButton(
-                  onPressed: _trackNotifRead,
-                  child: const Text('Track notif_read'),
-                ),
-                ElevatedButton(
-                  onPressed: _hitDio,
-                  child: const Text('Dio GET'),
-                ),
-                ElevatedButton(
-                  onPressed: _hitHttp,
-                  child: const Text('http GET'),
-                ),
-                ElevatedButton(
-                  onPressed: _previewPayload,
-                  child: const Text('Preview payload'),
-                ),
-                ElevatedButton(onPressed: _flush, child: const Text('Flush')),
-                OutlinedButton(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => TrackerLogPage(tracker: tracker),
-                    ),
+        // Builder: context di bawah MaterialApp supaya Navigator.of jalan.
+        body: Builder(
+          builder: (context) => ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ElevatedButton(
+                    onPressed: _trackErrorRegistrasi,
+                    child: const Text('Track errorApiRegistrasi'),
                   ),
-                  child: const Text('Buka overlay log'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.black87,
-                borderRadius: BorderRadius.circular(8),
+                  ElevatedButton(
+                    onPressed: _trackNotifRead,
+                    child: const Text('Track notif_read'),
+                  ),
+                  ElevatedButton(
+                    onPressed: _hitDio,
+                    child: const Text('Dio GET'),
+                  ),
+                  ElevatedButton(
+                    onPressed: _hitHttp,
+                    child: const Text('http GET'),
+                  ),
+                  ElevatedButton(
+                    onPressed: _previewPayload,
+                    child: const Text('Preview payload'),
+                  ),
+                  ElevatedButton(onPressed: _flush, child: const Text('Flush')),
+                  OutlinedButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => TrackerLogPage(tracker: tracker),
+                      ),
+                    ),
+                    child: const Text('Buka overlay log'),
+                  ),
+                ],
               ),
-              child: Text(
-                _log,
-                style: const TextStyle(
-                  color: Colors.greenAccent,
-                  fontFamily: 'monospace',
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.black87,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  _log,
+                  style: const TextStyle(
+                    color: Colors.greenAccent,
+                    fontFamily: 'monospace',
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Coba: tekan "Track errorApiRegistrasi" 2x -> '
-              'yang kedua di-skip (dedup). Ubah data-nya -> ditambah.',
-            ),
-          ],
+              const SizedBox(height: 16),
+              const Text(
+                'Coba: tekan "Track errorApiRegistrasi" 2x -> '
+                'yang kedua di-skip (dedup). Ubah data-nya -> ditambah.',
+              ),
+            ],
+          ),
         ),
       ),
     );
