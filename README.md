@@ -34,7 +34,7 @@ positive/negative case, dan API log otomatis (Dio + http).
 
 ```yaml
 dependencies:
-  app_log_tracker: ^0.2.0
+  app_log_tracker: ^0.3.1
 ```
 
 ## Usage

@@ -1,3 +1,7 @@
+## 0.3.1
+
+* Docs: perbaiki versi install di README (`^0.3.1`).
+
 ## 0.3.0
 
 * Baru: multi-bahasa overlay via `TrackerLanguage.indonesian` (default,
